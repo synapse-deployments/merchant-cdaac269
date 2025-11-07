@@ -1,18 +1,1 @@
-query DeliveryCustomizationInput {
-  cart {
-    id
-    currency {
-      code
-    }
-    lines(first: 250) {
-      edges {
-        node {
-          quantity
-          cost {
-            unit_amount
-          }
-        }
-      }
-    }
-  }
-}
+query run($cartId: ID) { cart(id: $cartId) { cost { subtotalAmount { amount currencyCode } } subtotalPriceV2 { amount currencyCode } } checkout(id: $cartId) { subtotalPriceV2 { amount currencyCode } totalPriceV2 { amount currencyCode } } }

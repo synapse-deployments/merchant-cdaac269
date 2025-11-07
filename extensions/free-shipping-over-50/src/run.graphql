@@ -1,13 +1,1 @@
-query {
-  checkout {
-    subtotalAmount { amount currencyCode }
-    lineItems(first: 250) {
-      edges {
-        node {
-          discountedTotalPrice { amount currencyCode }
-          originalTotalPrice { amount currencyCode }
-        }
-      }
-    }
-  }
-}
+query DeliveryCustomizationQuery($cartId: ID!) { cart(id: $cartId) { subtotalPrice { amount currencyCode } } }

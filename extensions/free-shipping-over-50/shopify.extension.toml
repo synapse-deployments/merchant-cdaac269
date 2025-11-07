@@ -2,7 +2,7 @@ api_version = "2025-01"
 type = "function"
 name = "free-shipping-over-50"
 handle = "free-shipping-over-50"
-description = "A Shopify Delivery Customization Function that makes shipping free when the cart subtotal exceeds $50.00."
+description = "Shipping discount function that makes shipping free when cart subtotal exceeds $50."
 
 [build]
 command = "cargo build --target=wasm32-unknown-unknown --release"

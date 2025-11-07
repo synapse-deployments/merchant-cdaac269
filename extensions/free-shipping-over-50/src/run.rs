@@ -1,89 +1,107 @@
-import shopifyFunction from "@shopify/functions";
-import type { RunInput, FunctionRunResult } from "../generated/api";
+import type { RunInput, FunctionRunResult, DeliveryCustomization, DeliveryOptionModification, MoneyV2 } from "../generated/api";
 
-// Threshold in the shop's minor currency unit (e.g., cents for USD).
-const THRESHOLD_CENTS = 5000; // $50.00
+// Threshold in cents: $50.00
+const THRESHOLD_CENTS = 50 * 100;
 
-// Helper: parse decimal amount string (e.g., "123.45") into integer minor units (cents).
-function parseAmountToCents(amount): number {
-  if (!amount || typeof amount !== "string") return 0;
-  const parts = amount.split(".");
-  const wholePart = parts[0].replace(/[^0-9-]/g, "");
-  const whole = wholePart === "" ? 0 : parseInt(wholePart, 10);
-  if (isNaN(whole)) return 0;
-  let cents = whole * 100;
-  if (parts.length === 2) {
-    let frac = parts[1].replace(/[^0-9]/g, "");
-    if (frac.length === 0) {
-      // nothing
-    } else if (frac.length === 1) {
-      cents += parseInt(frac, 10) * 10;
-    } else {
-      // take first two digits (rounding could be added if desired)
-      cents += parseInt(frac.slice(0, 2), 10);
-    }
+// Helper to parse a decimal money string (e.g. "52.34") into cents as integer
+function parseAmountToCents(amountStr: string | undefined | null): number {
+  if (!amountStr) return 0;
+  const s = amountStr.trim();
+  if (s.length === 0) return 0;
+
+  // Handle optional negative sign
+  const negative = s.startsWith("-");
+  const normalized = negative ? s.slice(1) : s;
+
+  const parts = normalized.split(".");
+  const dollarsPart = parts[0] || "0";
+  const centsPart = parts[1] || "";
+
+  const dollars = parseInt(dollarsPart, 10) || 0;
+  let cents = 0;
+  if (centsPart.length === 0) {
+    cents = 0;
+  } else if (centsPart.length === 1) {
+    cents = parseInt(centsPart, 10) * 10;
+  } else {
+    // take at most two digits, ignore extra precision (truncate)
+    cents = parseInt(centsPart.slice(0, 2), 10);
   }
-  return cents;
+
+  const total = dollars * 100 + cents;
+  return negative ? -total : total;
 }
 
-// The exported run function expected by Shopify Functions.
-export function run(input): FunctionRunResult {
-  // Provide a safe default empty result
-  const defaultResult: FunctionRunResult = {
-    // delivery customization functions return operations that modify delivery prices
-    // In the generated API, the shape may include 'discounts', 'adjustments' or 'operations'.
-    // We'll return an empty array of operations by default.
-    operations: [],
+// Default empty result per recommendations
+function emptyResult(): FunctionRunResult {
+  return {
+    customizations: null,
     errors: [],
-  } as unknown as FunctionRunResult;
-
-  try {
-    // Defensive checks: ensure cart and subtotal exist on input
-    const cart = (input && (input as any).cart) || null;
-    const subtotal = cart && cart.subtotalPrice && cart.subtotalPrice.amount ? cart.subtotalPrice.amount : "0";
-
-    const subtotalCents = parseAmountToCents(subtotal);
-
-    if (subtotalCents > THRESHOLD_CENTS) {
-      // Create an operation that sets shipping line price to zero.
-      // The exact operation structure depends on the generated API. Commonly, delivery customization
-      // functions return operations that target shipping lines and set their price.
-      // We'll construct an operation object matching the typical schema from Shopify Functions examples.
-
-      const operation = {
-        type: "set_price",
-        target: {
-          type: "shipping_line",
-        },
-        // Set price to zero in money object (string amounts with currencyCode)
-        price: {
-          amount: "0.00",
-          currencyCode: cart && cart.subtotalPrice && cart.subtotalPrice.currencyCode ? cart.subtotalPrice.currencyCode : "USD",
-        },
-        // Optional message shown to merchant/customer
-        message: "Free shipping for orders over $50",
-      };
-
-      return {
-        operations: [operation],
-        errors: [],
-      } as unknown as FunctionRunResult;
-    }
-
-    // If threshold not met, return default (no operations)
-    return defaultResult;
-  } catch (e) {
-    // Handle unexpected errors by returning an error in the function result rather than throwing.
-    const message = e && (e as Error).message ? (e as Error).message : String(e);
-    return {
-      operations: [],
-      errors: [{ message }],
-    } as unknown as FunctionRunResult;
-  }
+  };
 }
 
-// Register the function (this import/registration may vary depending on your build tooling).
-// The shopify functions runtime looks for the exported `run` function. The default export
-// from '@shopify/functions' is sometimes used to register metadata; including this line
-// does not change the exported run function but ensures the module is recognized during build.
-export default shopifyFunction;
+export function run(input): FunctionRunResult {
+  try {
+    // The generated input types provide access to cart and cost information
+    const cart = input.cart ?? null;
+    // Fallback currency
+    const currency = cart?.currency ?? "USD";
+
+    // Many generated schemas provide totalAmount as an object with amount (string) and currencyCode
+    // Try multiple common paths to find a subtotal/total amount string
+    let amountStr: string | undefined | null = null;
+
+    if (cart && cart.cost && cart.cost.totalAmount && typeof cart.cost.totalAmount.amount === "string") {
+      amountStr = cart.cost.totalAmount.amount;
+    } else if (cart && cart.subtotalPrice && typeof cart.subtotalPrice === "string") {
+      // older/generated variations
+      amountStr = cart.subtotalPrice;
+    } else if (cart && cart.totalPrice && typeof cart.totalPrice === "string") {
+      amountStr = cart.totalPrice;
+    }
+
+    const subtotalCents = parseAmountToCents(amountStr);
+
+    // If below threshold, return empty result (no customizations)
+    if (subtotalCents < THRESHOLD_CENTS) {
+      return emptyResult();
+    }
+
+    // Build a delivery customization that sets shipping price to 0 for options
+    const zeroMoney: MoneyV2 = {
+      amount: "0.00",
+      currencyCode: currency,
+    };
+
+    const shippingModification: DeliveryOptionModification = {
+      // Apply to all options by not specifying an id
+      price: zeroMoney,
+      title: "Free shipping",
+      description: "Free shipping for orders over $50",
+    };
+
+    const deliveryCustomization: DeliveryCustomization = {
+      modifications: [shippingModification],
+    };
+
+    const result: FunctionRunResult = {
+      customizations: {
+        delivery: deliveryCustomization,
+      },
+      errors: [],
+    };
+
+    return result;
+  } catch (e) {
+    // On unexpected errors, return a safe empty result plus a structured error if possible
+    const message = e instanceof Error ? e.message : String(e);
+    return {
+      customizations: null,
+      errors: [
+        {
+          message: `Free shipping function error: ${message}`,
+        },
+      ],
+    };
+  }
+}

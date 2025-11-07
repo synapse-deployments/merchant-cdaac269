@@ -1,1 +1,14 @@
-query DeliveryCustomizationQuery($cartId: ID!) { cart(id: $cartId) { subtotalPrice { amount currencyCode } } }
+query CartQuery($cartId: ID) {
+  cart(id: $cartId) {
+    id
+    currency
+    cost {
+      totalAmount {
+        amount
+        currencyCode
+      }
+    }
+    subtotalPrice
+    totalPrice
+  }
+}

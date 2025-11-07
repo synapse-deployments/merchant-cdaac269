@@ -2,7 +2,7 @@ api_version = "2025-01"
 type = "function"
 name = "free-shipping-over-50"
 handle = "free-shipping-over-50"
-description = "Provides free shipping by setting delivery prices to zero when the cart subtotal is $50 or more."
+description = "Provide free shipping when the cart subtotal (before shipping and taxes) exceeds $50."
 
 [build]
 command = "cargo build --target=wasm32-unknown-unknown --release"

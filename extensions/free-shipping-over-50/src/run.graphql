@@ -1,17 +1,12 @@
-query ($input: CartDeliveryCustomizationInput!) {
-  cartDeliveryCustomization(input: $input) {
-    cartCost {
-      subtotalAmount {
-        amount
-        currencyCode
-      }
-    }
-    deliveries {
-      id
-      title
-      price {
-        amount
-        currencyCode
+query {
+  checkout {
+    subtotalAmount { amount currencyCode }
+    lineItems(first: 250) {
+      edges {
+        node {
+          discountedTotalPrice { amount currencyCode }
+          originalTotalPrice { amount currencyCode }
+        }
       }
     }
   }

@@ -1,9 +1,17 @@
 query DeliveryCustomizationInput {
   cart {
-    cost {
-      subtotalAmount {
-        amount
-        currencyCode
+    id
+    currency {
+      code
+    }
+    lines(first: 250) {
+      edges {
+        node {
+          quantity
+          cost {
+            unit_amount
+          }
+        }
       }
     }
   }

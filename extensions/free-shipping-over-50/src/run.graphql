@@ -1,0 +1,18 @@
+query ($input: CartDeliveryCustomizationInput!) {
+  cartDeliveryCustomization(input: $input) {
+    cartCost {
+      subtotalAmount {
+        amount
+        currencyCode
+      }
+    }
+    deliveries {
+      id
+      title
+      price {
+        amount
+        currencyCode
+      }
+    }
+  }
+}

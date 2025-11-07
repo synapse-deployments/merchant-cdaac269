@@ -1,0 +1,14 @@
+api_version = "2025-01"
+type = "function"
+name = "free-shipping-over-50"
+handle = "free-shipping-over-50"
+description = "Provides free shipping by setting delivery prices to zero when the cart subtotal is $50 or more."
+
+[build]
+command = "cargo build --target=wasm32-unknown-unknown --release"
+path = "target/wasm32-unknown-unknown/release/free_shipping_over_50.wasm"
+
+[[targeting]]
+target = "purchase.delivery-customization.run"
+input_query = "src/run.graphql"
+export = "run"

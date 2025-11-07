@@ -1,0 +1,59 @@
+{
+  "name": "Shopify App - merchant-cdaac269-9d01-4104-99d9-ebcfeaa7da0c",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:20-bullseye",
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "version": "latest"
+    }
+  },
+  "postCreateCommand": "npm install -g @shopify/cli @shopify/app pnpm && pnpm install || npm install",
+  "postStartCommand": "echo \"🚀 Shopify Development Environment Ready!\" && echo \"📝 Run 'shopify app dev' to start development server\" && echo \"🔨 Run 'shopify app deploy' to deploy changes\"",
+  "forwardPorts": [
+    3000,
+    9292
+  ],
+  "portsAttributes": {
+    "3000": {
+      "label": "Shopify App",
+      "onAutoForward": "notify",
+      "protocol": "https"
+    },
+    "9292": {
+      "label": "Tunnel",
+      "onAutoForward": "silent"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "shopify.ruby-lsp",
+        "graphql.vscode-graphql",
+        "github.vscode-pull-request-github",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "/bin/bash"
+          }
+        },
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": true
+        },
+        "files.associations": {
+          "*.toml": "toml",
+          "shopify.app.toml": "toml",
+          "shopify.extension.toml": "toml"
+        }
+      }
+    }
+  },
+  "remoteEnv": {
+    "SHOPIFY_FLAG_NO_ANALYTICS": "1",
+    "MERCHANT_ID": "cdaac269-9d01-4104-99d9-ebcfeaa7da0c"
+  }
+}
